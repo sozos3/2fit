@@ -66,6 +66,7 @@ export default function SearchScreen({ route, navigation }) {
   });
   const viewabilityConfigRef = useRef({ itemVisiblePercentThreshold: 60 });
 
+  // Explore category buttons
   const typeOptions = [
     {
       label: t('search.filterAll'),
@@ -80,10 +81,21 @@ export default function SearchScreen({ route, navigation }) {
       value: 'trainer',
     },
     {
-      label: t('search.filterShop'),
-      value: 'shop',
+      label: 'Martial Arts',
+      value: 'martial-arts',
+    },
+    {
+      label: 'Wellness',
+      value: 'wellness',
     },
   ];
+
+  // Martial Arts and Wellness use category filtering.
+  const isCategoryChip =
+    type === 'martial-arts' || type === 'wellness';
+
+  const searchType = isCategoryChip ? undefined : type;
+  const searchCategory = isCategoryChip ? type : category;
 
   useEffect(() => {
     if (!route.params) return;
@@ -129,8 +141,8 @@ export default function SearchScreen({ route, navigation }) {
 
       search({
         q: query || undefined,
-        type: type === 'all' ? undefined : type,
-        category: category || undefined,
+        type: searchType === 'all' ? undefined : searchType,
+        category: searchCategory || undefined,
         radiusKm: radiusKm || undefined,
         minRating: minRating || undefined,
         lat: coords?.lat,
@@ -144,8 +156,8 @@ export default function SearchScreen({ route, navigation }) {
     return () => clearTimeout(timeout);
   }, [
     query,
-    type,
-    category,
+    searchType,
+    searchCategory,
     radiusKm,
     minRating,
     coords,
@@ -156,16 +168,24 @@ export default function SearchScreen({ route, navigation }) {
   const sortedResults = useMemo(() => {
     if (sortBy !== 'rating') return results;
 
-    return [...results].sort((a, b) => (b.rating_avg ?? -1) - (a.rating_avg ?? -1));
+    return [...results].sort(
+      (a, b) => (b.rating_avg ?? -1) - (a.rating_avg ?? -1)
+    );
   }, [results, sortBy]);
 
   const handleSelectOnMap = (place) => {
     const key = `${place.type}-${place.id}`;
     setSelectedKey(key);
 
-    const index = sortedResults.findIndex((item) => `${item.type}-${item.id}` === key);
+    const index = sortedResults.findIndex(
+      (item) => `${item.type}-${item.id}` === key
+    );
+
     if (index >= 0) {
-      carouselRef.current?.scrollToIndex({ index, animated: true });
+      carouselRef.current?.scrollToIndex({
+        index,
+        animated: true,
+      });
     }
   };
 
@@ -193,9 +213,21 @@ export default function SearchScreen({ route, navigation }) {
       <View style={styles.headerActions}>
         <View style={styles.filterButton}>
           <IconButton
-            name={viewMode === 'list' ? 'map-outline' : 'list-outline'}
-            accessibilityLabel={viewMode === 'list' ? t('search.mapViewA11y') : t('search.listViewA11y')}
-            onPress={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
+            name={
+              viewMode === 'list'
+                ? 'map-outline'
+                : 'list-outline'
+            }
+            accessibilityLabel={
+              viewMode === 'list'
+                ? t('search.mapViewA11y')
+                : t('search.listViewA11y')
+            }
+            onPress={() =>
+              setViewMode(
+                viewMode === 'list' ? 'map' : 'list'
+              )
+            }
           />
         </View>
 
@@ -207,7 +239,7 @@ export default function SearchScreen({ route, navigation }) {
             )}
             onPress={() =>
               navigation.navigate('Filters', {
-                category,
+                category: searchCategory,
                 radiusKm,
                 minRating,
               })
@@ -219,20 +251,35 @@ export default function SearchScreen({ route, navigation }) {
   );
 
   const resultsCountLabel = t(
-    sortedResults.length === 1 ? 'search.resultsCountOne' : 'search.resultsCount',
+    sortedResults.length === 1
+      ? 'search.resultsCountOne'
+      : 'search.resultsCount',
     { count: sortedResults.length }
   );
 
   const sortToggle = (
     <Pressable
-      onPress={() => setSortBy(sortBy === 'nearest' ? 'rating' : 'nearest')}
+      onPress={() =>
+        setSortBy(
+          sortBy === 'nearest'
+            ? 'rating'
+            : 'nearest'
+        )
+      }
       style={styles.sortButton}
       accessibilityRole="button"
       accessibilityLabel={t('search.sortA11y')}
     >
-      <Ionicons name="swap-vertical-outline" size={14} color="#FFD400" />
+      <Ionicons
+        name="swap-vertical-outline"
+        size={20}
+        color="#FFD400"
+      />
+
       <Text style={styles.sortButtonText}>
-        {sortBy === 'nearest' ? t('search.sortNearest') : t('search.sortTopRated')}
+        {sortBy === 'nearest'
+          ? t('search.sortNearest')
+          : t('search.sortTopRated')}
       </Text>
     </Pressable>
   );
@@ -260,11 +307,14 @@ export default function SearchScreen({ route, navigation }) {
           keyExtractor={(item) => item.value}
           contentContainerStyle={styles.typeRow}
           renderItem={({ item }) => {
-            const isSelected = type === item.value;
+            const isSelected =
+              type === item.value;
 
             return (
               <Pressable
-                onPress={() => setType(item.value)}
+                onPress={() =>
+                  setType(item.value)
+                }
                 style={[
                   styles.typeChip,
                   isSelected
@@ -299,7 +349,7 @@ export default function SearchScreen({ route, navigation }) {
               <View
                 key={item.id}
                 style={
-                  category === item.slug
+                  searchCategory === item.slug
                     ? styles.selectedCategoryWrap
                     : styles.categoryWrap
                 }
@@ -307,7 +357,7 @@ export default function SearchScreen({ route, navigation }) {
                 <CategoryGridCard
                   category={item}
                   selected={
-                    category === item.slug
+                    searchCategory === item.slug
                   }
                   onPress={() =>
                     navigation.navigate(
@@ -327,23 +377,39 @@ export default function SearchScreen({ route, navigation }) {
           <Text style={styles.sectionTitle}>
             {t('search.popularNearbyTitle')}
           </Text>
-          {sortedResults.length > 0 ? <Text style={styles.resultsCount}>{resultsCountLabel}</Text> : null}
+
+          {sortedResults.length > 0 ? (
+            <Text style={styles.resultsCount}>
+              {resultsCountLabel}
+            </Text>
+          ) : null}
         </View>
 
-        {sortedResults.length > 1 ? sortToggle : null}
+        {sortedResults.length > 1
+          ? sortToggle
+          : null}
       </View>
     </View>
   );
 
   if (viewMode === 'map') {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView
+        style={styles.safeArea}
+        edges={['top']}
+      >
         <View style={styles.mapTopControls}>
           {topControls}
+
           {sortedResults.length > 0 ? (
             <View style={styles.mapResultsRow}>
-              <Text style={styles.resultsCount}>{resultsCountLabel}</Text>
-              {sortedResults.length > 1 ? sortToggle : null}
+              <Text style={styles.resultsCount}>
+                {resultsCountLabel}
+              </Text>
+
+              {sortedResults.length > 1
+                ? sortToggle
+                : null}
             </View>
           ) : null}
         </View>
@@ -356,10 +422,15 @@ export default function SearchScreen({ route, navigation }) {
         />
 
         {isLoading ? (
-          <ActivityIndicator color="#FFD400" style={styles.mapSpinner} />
+          <ActivityIndicator
+            color="#FFD400"
+            style={styles.mapSpinner}
+          />
         ) : sortedResults.length === 0 ? (
           <View style={styles.mapEmptyBanner}>
-            <Text style={styles.message}>{error ?? t('search.empty')}</Text>
+            <Text style={styles.message}>
+              {error ?? t('search.empty')}
+            </Text>
           </View>
         ) : (
           <FlatList
@@ -368,18 +439,34 @@ export default function SearchScreen({ route, navigation }) {
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             data={sortedResults}
-            keyExtractor={(item) => `${item.type}-${item.id}`}
+            keyExtractor={(item) =>
+              `${item.type}-${item.id}`
+            }
             contentContainerStyle={styles.carousel}
             style={styles.carouselWrap}
             onScrollToIndexFailed={() => {}}
-            onViewableItemsChanged={handleViewableItemsChangedRef.current}
-            viewabilityConfig={viewabilityConfigRef.current}
+            onViewableItemsChanged={
+              handleViewableItemsChangedRef.current
+            }
+            viewabilityConfig={
+              viewabilityConfigRef.current
+            }
             renderItem={({ item }) => (
               <PlaceCardCompact
                 place={item}
-                selected={`${item.type}-${item.id}` === selectedKey}
+                selected={
+                  `${item.type}-${item.id}` ===
+                  selectedKey
+                }
                 onPress={() =>
-                  navigation.navigate('PlaceDetail', { type: item.type, id: item.id, distanceKm: item.distance_km })
+                  navigation.navigate(
+                    'PlaceDetail',
+                    {
+                      type: item.type,
+                      id: item.id,
+                      distanceKm: item.distance_km,
+                    }
+                  )
                 }
               />
             )}
@@ -562,21 +649,24 @@ const styles = StyleSheet.create({
     marginTop: -spacing.sm,
   },
 
+  // Larger, more visible Nearest / Top Rated button
   sortButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'center',
+    gap: 10,
     backgroundColor: '#1A1A1A',
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    borderWidth: 2,
+    borderColor: '#FFD400',
+    borderRadius: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    minWidth: 150,
   },
 
   sortButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
     color: '#FFD400',
   },
 
